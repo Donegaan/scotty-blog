@@ -35,6 +35,9 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - scotty-blog
+    - scotty
+    - text
+    - blaze-html
 
 tests:
   scotty-blog-test:
