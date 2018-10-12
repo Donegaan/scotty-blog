@@ -10,12 +10,9 @@ import qualified Text.Blaze.Html.Renderer.Text as R
 import Data.Text.Lazy
 
 main = scotty 3000 $ do
-  get "/" $ do
-    S.html $ homePage
+  get "/" homePage
 
-  get "/login" $ do
-    S.html $ loginPage
-
+  get "/newblog" newBlogPage
 --   get (literal "/greet/") $ do -- literal matches the exact url string
 --       html $ "Oh, wow!"
 
@@ -35,21 +32,21 @@ main = scotty 3000 $ do
 --       H.h1 "Welcome!"
 --       H.p ("Welcome to my Scotty app, " >> H.toHtml n)
 
-homePage :: Text
-homePage = do
+homePage :: ActionM()
+homePage = S.html $
   R.renderHtml $ do
     H.head $ H.title "Andrew's Blog"
-    H.body $ do
+    H.body $
       H.h1 "Hi to blog"
 
-loginPage :: Text
-loginPage = do
+newBlogPage :: ActionM()
+newBlogPage = S.html $
   R.renderHtml $ do
     H.head $ H.title "Login to Andrew' Blog"
-    H.body $ do
-      H.div H.! A.class_ "form" $ do
+    H.body $
+      H.div H.! A.class_ "form" $
         H.input H.! A.type_ "text"
         -- H.button H.! A.type_ "button"
       -- H.a "Sign in"
-  
+
 -- newEntry :: Text
