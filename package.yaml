@@ -38,6 +38,7 @@ executables:
     - scotty
     - text
     - blaze-html
+    - time
 
 tests:
   scotty-blog-test:
