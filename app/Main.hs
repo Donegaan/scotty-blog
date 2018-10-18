@@ -17,7 +17,7 @@ data Post = Post { -- record datatype
   postTitle :: String,
   postBody :: String
   -- ,postID :: Int
-  -- ,postDate:: (Integer,Int,Int)
+  ,postDate:: String
 } deriving (Show,Read)
 
 main = scotty 3000 $ do
@@ -32,7 +32,9 @@ main = scotty 3000 $ do
   -- post request, can pick out the parameters such as title and body of blog
 
 homePage :: ActionM()
-homePage = S.html $
+homePage = do
+  posts <- liftIO getPosts :: ActionM [Post]
+  S.html $
     R.renderHtml $ do
       B.head $ B.title "Andrew's Blog"
       B.body $ do
@@ -41,9 +43,9 @@ homePage = S.html $
           B.button B.! A.type_ "submit" $ "New Blog"
         B.form B.! A.action "/allblogs" B.! A.formaction "get"  $
           B.button B.! A.type_ "submit" $ "All Blogs"
-        B.div $ do
-          B.h1 "Blog Title 1"
-          B.p "Blog body 1"
+        case take 5 posts of -- Check if there are any posts saved.
+                        [] -> B.p "No posts to display"
+                        xs -> displayPosts xs
 
 
 newBlogPage :: ActionM()
@@ -68,8 +70,8 @@ newEntry = do passWord <- S.param "blogPass" :: ActionM String
                 title <- S.param "blogTitle" :: ActionM String
                 --TODO: Post ID = length of list, date: getCurrentTime and then format the date into String
                 time <- liftIO getCurrentTime
-                let (y,m,d) = toGregorian $ utctDay time -- to get date for post
-                let newBlog = Post {postTitle = title, postBody = blogMain}
+                currentDate <- let (y,m,d) = toGregorian $ utctDay time in return $ show d ++ "/" ++ show m ++ "/" ++ show y-- to get date for post
+                let newBlog = Post {postTitle = title, postBody = blogMain, postDate = currentDate}
                 liftIO $ storeBlog newBlog
                 liftIO $ putStrLn "PASS WORKED "
               else
@@ -90,11 +92,31 @@ getPosts = do
   return $! (read contents :: [Post]) -- converts string contents to list of Posts
 
 
--- TODO: display on homepage up to 5, click on post and it displays on its own page
--- passwords for posting blog, view list of all blogs
+-- TODO: display on homepage up to 5, click on post and it displays on its own page, view list of all blogs
+displayPosts :: [Post] -> B.Html
+displayPosts [] = B.p ""
+displayPosts (p:xs) = do
+    B.div $ do
+      B.h1 $ B.toHtml (postTitle p)
+      B.p $ B.toHtml (postDate p)
+      B.p $ B.toHtml (postBody p)
+    displayPosts xs -- call display posts again for next post
+
+displaySinglePost :: Post -> B.Html
+displaySinglePost post1 =
+      B.body $
+        B.div $ do
+          B.h1 $ B.toHtml (postTitle post1)
+          B.p $ B.toHtml (postDate post1)
+          B.p $ B.toHtml (postBody post1)
 
 allBlogs :: ActionM() -- Display all Blogs
-allBlogs = S.html $
-  R.renderHtml $
-    B.body $
-     B.h1 "All Blogs"
+allBlogs = do
+  posts <- liftIO getPosts :: ActionM [Post]
+  S.html $
+    R.renderHtml $
+      B.body $ do
+       B.h1 "All Blogs"
+       case posts of -- Check if there are any posts saved.
+                       [] -> B.p "No posts to display"
+                       xs -> displayPosts xs
