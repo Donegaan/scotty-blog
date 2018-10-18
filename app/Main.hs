@@ -11,7 +11,7 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Text.Lazy
 import Data.Time
 
-fileName = "blogs.txt"
+fileName = "./blogs.txt"
 
 data Post = Post { -- record datatype
   postTitle :: String,
@@ -20,7 +20,7 @@ data Post = Post { -- record datatype
   ,postDate:: String
 } deriving (Show,Read)
 
-main = scotty 3000 $ do
+main = scotty 3000 $ do -- Routing
   get "/" homePage
 
   get "/newblog" newBlogPage
@@ -65,14 +65,17 @@ newBlogPage = S.html $
         "Password: "
         B.input B.! A.type_ "password" B.! A.name "blogPass"
         B.button B.! A.type_ "submit" $ "Post Blog"
+        B.br
+        "Hint: The password is pass"
 
 newEntry :: ActionM() -- Save new blog post
 newEntry = do passWord <- S.param "blogPass" :: ActionM String
-              -- title <- S.param "blogTitle" :: ActionM String
-              -- posts <- liftIO getPosts
-              if passWord == "pass" then do
+              title <- S.param "blogTitle" :: ActionM String
+              posts <- liftIO getPosts
+              -- Checks if password is correct and if the title is not a duplicate.
+              -- Title can't be duplicate as I use its name as the reference to get the blog from the blogs.txt file.
+              if passWord == "pass" && not (Prelude.any (\x -> postTitle x == title) posts) then do
                 blogMain <- S.param "blogBody" :: ActionM String
-                title <- S.param "blogTitle" :: ActionM String
                 time <- liftIO getCurrentTime
                 currentDate <- let (y,m,d) = toGregorian $ utctDay time in return $ show d ++ "/" ++ show m ++ "/" ++ show y-- to get date for post
                 let newBlog = Post {postTitle = title, postBody = blogMain, postDate = currentDate}
@@ -94,14 +97,14 @@ getPosts = do
   return $! (read contents :: [Post]) -- converts string contents to list of Posts
 
 
--- TODO: click on post and it displays on its own page, no duplicate titles OR unique ID
+-- TODO: no duplicate titles OR unique ID
 
 displayPosts :: [Post] -> B.Html
 displayPosts [] = B.p "" -- If no posts left in list
 displayPosts (p:xs) = do
     B.div $ do
       B.h2 $
-        B.a B.! A.href (B.stringValue  ("/blog/" ++ postTitle p)) $ B.toHtml (postTitle p)
+        B.a B.! A.href (B.stringValue  ("/blogs/" ++ postTitle p)) $ B.toHtml (postTitle p)
       B.p $ B.toHtml (postDate p)
       B.p $ B.toHtml (postBody p)
     displayPosts xs -- call display posts again for next post
@@ -120,4 +123,12 @@ allBlogs = do
 displaySingleBlog :: String -> ActionM()
 displaySingleBlog blogName = do -- find the blog in text file
   posts <- liftIO getPosts
-  S.html $ R.renderHtml $ displayPosts $ Prelude.filter (\x -> postTitle x == blogName) posts
+  S.html $ R.renderHtml $ displayOnePost $ Prelude.filter (\x -> postTitle x == blogName) posts
+
+displayOnePost :: [Post] -> B.Html -- Display single post on its own page
+displayOnePost  []= B.p "No post to display"
+displayOnePost [p] =
+  B.div $ do
+    B.h2 $ B.toHtml (postTitle p)
+    B.p $ B.toHtml (postDate p)
+    B.p $ B.toHtml (postBody p)
