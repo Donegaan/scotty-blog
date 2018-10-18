@@ -11,13 +11,12 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Text.Lazy
 import Data.Time
 
-fileName = "./blogs.txt"
+fileName = "blogs.txt"
 
 data Post = Post { -- record datatype
   postTitle :: String,
-  postBody :: String
-  -- ,postID :: Int
-  ,postDate:: String
+  postBody :: String,
+  postDate:: String
 } deriving (Show,Read)
 
 main = scotty 3000 $ do -- Routing
@@ -33,9 +32,8 @@ main = scotty 3000 $ do -- Routing
     blogName <- param "blogName"
     displaySingleBlog blogName
 
-  -- post request, can pick out the parameters such as title and body of blog
 
-homePage :: ActionM()
+homePage :: ActionM() -- Home page with newest 5 posts and links to make new post and view all posts.
 homePage = do
   posts <- liftIO getPosts :: ActionM [Post]
   S.html $
@@ -50,6 +48,7 @@ homePage = do
         case Prelude.take 5 posts of -- Check if there are any posts saved.
                         [] -> B.p "No posts to display"
                         xs -> displayPosts xs
+
 
 newBlogPage :: ActionM() -- Page to enter new post
 newBlogPage = S.html $
@@ -68,6 +67,7 @@ newBlogPage = S.html $
         B.br
         "Hint: The password is pass"
 
+
 newEntry :: ActionM() -- Save new blog post
 newEntry = do passWord <- S.param "blogPass" :: ActionM String
               title <- S.param "blogTitle" :: ActionM String
@@ -85,19 +85,18 @@ newEntry = do passWord <- S.param "blogPass" :: ActionM String
                 liftIO $ putStrLn "NO PASS"
               S.redirect "/" -- Redirect to homepage to display blog posts
 
+
 storeBlog :: Post -> IO () -- Store newest blog in file at head of list
 storeBlog newPost = do
   blogList <- getPosts
-  -- print blogList
-  writeFile fileName $ show $ newPost:blogList
+  writeFile fileName $ show $ newPost:blogList -- Append new post to top of list
+
 
 getPosts :: IO [Post] -- Get all blog posts from text file
 getPosts = do
   contents <- readFile fileName
   return $! (read contents :: [Post]) -- converts string contents to list of Posts
 
-
--- TODO: no duplicate titles OR unique ID
 
 displayPosts :: [Post] -> B.Html
 displayPosts [] = B.p "" -- If no posts left in list
@@ -120,10 +119,12 @@ allBlogs = do
                        [] -> B.p "No posts to display"
                        xs -> displayPosts xs
 
-displaySingleBlog :: String -> ActionM()
+
+displaySingleBlog :: String -> ActionM() -- Filter post to display on its own page
 displaySingleBlog blogName = do -- find the blog in text file
   posts <- liftIO getPosts
   S.html $ R.renderHtml $ displayOnePost $ Prelude.filter (\x -> postTitle x == blogName) posts
+
 
 displayOnePost :: [Post] -> B.Html -- Display single post on its own page
 displayOnePost  []= B.p "No post to display"
